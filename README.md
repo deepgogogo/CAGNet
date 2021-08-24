@@ -30,8 +30,6 @@ After downloading these assets, put the model weights in `CAGNet/data` and extra
 The default filenames should work properly. The directory `CAGNet/data` looks like this
 ```commandline
 .
-├── basemodel_bit.pth
-├── basemodel_tvhi.pth
 ├── BIT
 │   ├── BIT-anno
 │   └── Bit-frames
