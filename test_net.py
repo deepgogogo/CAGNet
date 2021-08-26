@@ -35,7 +35,7 @@ def createLogpath(cfg):
 
 def test_net(cfg):
     """
-    training net
+    test net
     """
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.device_list
 
