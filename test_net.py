@@ -33,7 +33,7 @@ def createLogpath(cfg):
 
     return log_path
 
-def train_net(cfg):
+def test_net(cfg):
     """
     training net
     """

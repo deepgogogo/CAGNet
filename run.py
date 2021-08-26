@@ -1,5 +1,5 @@
 import sys
-from train_net import train_net
+from test_net import test_net
 from utils import setSeed
 import datetime
 import argparse
@@ -195,5 +195,5 @@ for k in list(vars(cfg).keys()):
 
 print('Configs'.center(50,'='))
 
-train_net(cfg)
+test_net(cfg)
 
