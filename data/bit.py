@@ -326,12 +326,14 @@ def build_bit(cfg):
     training_loader=data.DataLoader(training_set,
                                      batch_size=cfg.batch_size,
                                      shuffle=True,
-                                     num_workers=cfg.num_workers)
+                                     num_workers=cfg.num_workers,
+                                     )
 
     validation_loader=data.DataLoader(validation_set,
                                       batch_size=cfg.test_batch_size,
                                       shuffle=True,
-                                      num_workers=cfg.num_workers)
+                                      num_workers=cfg.num_workers,
+                                      )
 
     print('Build dataset finished...')
     print('%d train samples' % len(train_frames))

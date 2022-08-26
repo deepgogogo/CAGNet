@@ -218,57 +218,8 @@ class BasenetFgnnMeanfield(nn.Module):
             if isinstance(m,nn.Linear):
                 nn.init.kaiming_normal_(m.weight)
 
-        if self.cfg.test:
-            self.load_savedmodel(cfg.savedmodel_path)
-        else:
-            self.load_pretrained_basemodel(cfg.base_model_path)
-
         for p in self.backbone.parameters():
             p.require_grad=False
-
-    def savemodel(self,filepath):
-        state = {
-            'backbone': self.backbone.state_dict(),
-            'fc_emb_1':self.fc_emb_1.state_dict(),
-            'fc_edge':self.fc_edge.state_dict(),
-            'fc_action_node':self.fc_action_node.state_dict(),
-            'fc_action_final':self.fc_action_final.state_dict(),
-            'fc_interactions_mid':self.fc_interactions_mid.state_dict(),
-            'fc_interactions_final':self.fc_interactions_final.state_dict(),
-            'fc_action_mid':self.fc_action_mid.state_dict(),
-            'nl_action_mid':self.nl_action_mid.state_dict(),
-            'fgnn':self.fgnn.state_dict(),
-            'lambda_h': self.lambda_h,
-            'lambda_g': self.lambda_g
-        }
-        
-        torch.save(state, filepath)
-        print('model saved to:',filepath)
-
-    def load_pretrained_basemodel(self,filepath):
-        state=torch.load(filepath)
-        self.backbone.load_state_dict(state['backbone'])
-        self.fc_emb_1.load_state_dict(state['fc_emb_1'])
-
-    def loadmodel(self,filepath):
-        state=torch.load(filepath)
-        self.backbone.load_state_dict(state['backbone'])
-        self.fc_emb_1.load_state_dict(state['fc_emb_1'])
-
-    def load_savedmodel(self, filepath):
-        state = torch.load(filepath)
-        self.backbone.load_state_dict(state['backbone'])
-        self.fc_emb_1.load_state_dict(state['fc_emb_1'])
-        self.fgnn.load_state_dict(state['fgnn'])
-        self.fc_edge.load_state_dict(state['fc_edge'])
-        self.fc_action_node.load_state_dict(state['fc_action_node'])
-        self.fc_action_final.load_state_dict(state['fc_action_final'])
-        self.fc_interactions_mid.load_state_dict(state['fc_interactions_mid'])
-        self.fc_interactions_final.load_state_dict(state['fc_interactions_final'])
-        self.fc_action_mid.load_state_dict(state['fc_action_mid'])
-        self.nl_action_mid.load_state_dict(state['nl_action_mid'])
-        self.lambda_h=state['lambda_h']
-        self.lambda_g=state['lambda_g']
 
 
     def forward(self,batch_data):
@@ -351,20 +302,13 @@ class BasenetFgnnMeanfield(nn.Module):
 
 
             # Predict interactions
-            # interaction_flat=[]
-            # for i in range(N):
-            #     for j in range(N):
-            #         if i!=j:
-            #             # concatenate features of two nodes
-            #             interaction_flat.append(torch.cat([boxes_states_flat[i],boxes_states_flat[j]],dim=0))
-            # interaction_flat=torch.stack(interaction_flat,dim=0) #N(N-1),2048
-
-            inter1=boxes_states_flat[:,None,:].repeat(1,N,1)
-            inter2=boxes_states_flat[None,:,:].repeat(N,1,1)
-            interaction_flat=torch.cat((inter1,inter2),dim=-1)
-            idx=torch.nonzero(1-torch.eye(N).cuda()).cuda()
-            interaction_flat=interaction_flat[idx[:,0],idx[:,1],:]
-
+            interaction_flat=[]
+            for i in range(N):
+                for j in range(N):
+                    if i!=j:
+                        # concatenate features of two nodes
+                        interaction_flat.append(torch.cat([boxes_states_flat[i],boxes_states_flat[j]],dim=0))
+            interaction_flat=torch.stack(interaction_flat,dim=0) #N(N-1),2048
 
 
             # ===== fgnn procedure

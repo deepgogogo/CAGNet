@@ -1,9 +1,15 @@
+import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+import json
+import numpy as np
+
+import time
+import random
 import os
+import sys
 from sklearn.metrics import  precision_recall_fscore_support,confusion_matrix
-import datetime
 
 from CAGNet import BasenetFgnnMeanfield
 from data.build_dataset import build_dataset
@@ -23,19 +29,14 @@ def adjust_lr(optimizer, new_lr):
 
 def createLogpath(cfg):
     # eg CAGNet/log/bit/line_name
-    log_path=os.path.join(
-        cfg.log_path,
-        cfg.dataset_name,
-        f"{cfg.linename}_{datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S')}")
-
+    log_path=os.path.join(cfg.log_path,cfg.dataset_name,cfg.linename)
     if os.path.exists(log_path)==False:
         os.makedirs(log_path,exist_ok=True)
-
     return log_path
 
-def test_net(cfg):
+def train_net(cfg):
     """
-    test net
+    training net
     """
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg.device_list
 
@@ -54,6 +55,33 @@ def test_net(cfg):
 
     model=BasenetFgnnMeanfield(cfg)
 
+    # if cfg.use_multi_gpu:
+    #     model = nn.DataParallel(model)
+
+    # model = model.cuda()
+    # model.train()  # train mode
+    # model.apply(set_bn_eval)
+
+    # if cfg.solver == 'adam':
+    #     optimizer = optim.Adam(filter(lambda p: p.requires_grad,
+    #                                   model.parameters()),
+    #                            lr=cfg.train_learning_rate,
+    #                            weight_decay=cfg.weight_decay)
+
+    # start_epoch = 1
+
+    if cfg.test==True:
+        print('begin test')
+        model.load_state_dict(torch.load(cfg.savedmodel_path))
+        if cfg.use_multi_gpu:
+            model = nn.DataParallel(model)
+        model = model.cuda()
+        test_info = test_func(validation_loader, model, device, 'test', cfg)
+        save_log(cfg,log_path,'test_info', test_info)
+        print('end test')
+        exit(0)
+
+
     if cfg.use_multi_gpu:
         model = nn.DataParallel(model)
 
@@ -67,18 +95,88 @@ def test_net(cfg):
                                lr=cfg.train_learning_rate,
                                weight_decay=cfg.weight_decay)
 
+    start_epoch = 1
 
-    if cfg.test==True:
-        print('begin test')
-        test_info = test_func(validation_loader, model, device, optimizer, 'test', cfg)
-        save_log(cfg,log_path,'test_info', test_info)
-        print('end test')
-        exit(0)
+    for epoch in range(start_epoch, start_epoch + cfg.max_epoch):
+        train_func(training_loader, model, device, optimizer, epoch, cfg)
+        if epoch % cfg.test_interval_epoch == 0:# evaluation
+            test_info = test_func(validation_loader, model, device, epoch, cfg)
+            save_log(cfg,log_path, 'log', test_info)
+            filepath=os.path.join(log_path,f'epoch{epoch}.pth')
+            if cfg.use_multi_gpu:
+                torch.save(model.module.state_dict(),filepath)
+            else:
+                torch.save(model.state_dict(),filepath)
+            print('*epoch ' + str(epoch) + ' finished')
 
-    raise NotImplementedError
+
+def train_func(data_loader, model, device, optimizer, epoch, cfg):
+    loss_meter = AverageMeter()
+    for batch_data in data_loader:
+        model.train()
+        model.apply(set_bn_eval)
+
+        # prepare batch data
+        batch_data = [b.to(device=device) for b in batch_data[:5]]  # move data to gpu
+        batch_size = batch_data[0].shape[0]
+        num_frames = batch_data[0].shape[1]
+
+        # forward
+        actions_scores, interaction_scores = model((batch_data[0], batch_data[1], batch_data[3]))
+
+        actions_in = batch_data[2].reshape((batch_size, num_frames, cfg.num_boxes))  # aligned action_label,which contains -1
+        interactions_in = batch_data[4].reshape((batch_size, num_frames, cfg.num_boxes * (cfg.num_boxes - 1)))
+        bboxes_num = batch_data[3].reshape(batch_size, num_frames)  # bbox_num
+
+        actions_in_nopad = []
+        interactions_in_nopad = []
+
+        actions_in = actions_in.reshape((batch_size * num_frames, cfg.num_boxes,))
+        interactions_in = interactions_in.reshape((batch_size * num_frames, cfg.num_boxes * (cfg.num_boxes - 1),))
+        bboxes_num = bboxes_num.reshape(batch_size * num_frames, )
+        for bt in range(batch_size * num_frames):
+            N = bboxes_num[bt]
+            actions_in_nopad.append(actions_in[bt, :N])
+            interactions_in_nopad.append(interactions_in[bt, :N * (N - 1)])
+
+        actions_in = torch.cat(actions_in_nopad, dim=0).reshape(-1, )  # ALL_N, sum of all valid action ground truth label
+        interactions_in = torch.cat(interactions_in_nopad, dim=0).reshape(-1, )
+
+        aweight,iweight=None,None
+        if cfg.action_weight!=None:
+            aweight=torch.tensor(cfg.action_weight,
+                                 dtype=torch.float,
+                                 device='cuda')
+        if cfg.inter_weight!=None:
+            iweight=torch.tensor(cfg.inter_weight,
+                                 dtype=torch.float,
+                                 device='cuda')
+        # Predict actions
+        actions_loss = F.cross_entropy(actions_scores,
+                                       actions_in,
+                                       weight=aweight)  # cross_entropy
+
+        interactions_loss = F.cross_entropy(interaction_scores,
+                                            interactions_in,
+                                            weight=iweight)
+
+        total_loss = actions_loss + interactions_loss
+
+        loss_meter.update(val=total_loss.item(), n=batch_size)
+
+        # Optim
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+
+    print('epoch: ' + str(epoch) + ', loss: ' + str(loss_meter.avg))
+    if cfg.use_multi_gpu:
+        print('lambda_h:{},lambda_g:{}'.format(model.module.lambda_h.item(), model.module.lambda_g.item()))
+    else:
+        print('lambda_h:{},lambda_g:{}'.format(model.lambda_h.item(), model.lambda_g.item()))
 
 
-def test_func(data_loader, model, device, optimizer, epoch, cfg):
+def test_func(data_loader, model, device, epoch, cfg):
     model.eval()
 
     actions_meter = AverageMeter()

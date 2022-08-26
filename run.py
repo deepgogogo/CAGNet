@@ -1,5 +1,5 @@
 import sys
-from test_net import test_net
+from train_net import train_net
 from utils import setSeed
 import datetime
 import argparse
@@ -108,7 +108,7 @@ parser.add_argument('--num_features_boxes',
 
 parser.add_argument('--linename',
                     type=str,
-                    default='CAGNet',
+                    default='CAGNet_{}'.format(datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S')),
                     help='name of the experiments, used by log and model name')
 
 
@@ -131,8 +131,8 @@ parser.add_argument('--weight_decay',
 
 parser.add_argument('--dataset_name',
                     type=str,
-                    default='',
-                    choices=['bit','tvhi'],
+                    default='bit',
+                    choices=['bit','ut','tvhi'],
                     help='choose the dataset for the experiment')
 
 parser.add_argument('--num_boxes',
@@ -195,5 +195,5 @@ for k in list(vars(cfg).keys()):
 
 print('Configs'.center(50,'='))
 
-test_net(cfg)
+train_net(cfg)
 
