@@ -25,6 +25,7 @@ the pretrained basemodel weights and the final CAGNet model weights respectly. Y
 - TVHI dataset [BaiduYun](https://pan.baidu.com/s/1f41VhH1LUlxrf1UhFqRnmw)  password: 0oia
 - CAGNet_bit [BaiduYun](https://pan.baidu.com/s/18YAWt0Jgd9mhpAPOi9iOFg)  password: 06j0
 - CAGNet_tvhi [BaiduYun](https://pan.baidu.com/s/12j9eZ4Wniit9vKOKbunqPA)  password: 3ii2
+- **Basemodel_bit** [BaiduYun](https://pan.baidu.com/s/14KdWuVsrdZaR8rODDIKgiQ?pwd=6j9g) password: 6j9g 
 
 After downloading these assets, put the model weights in `CAGNet/data` and extract the datasets to `CAGNet/data`. 
 The default filenames should work properly. The directory `CAGNet/data` looks like this
@@ -45,7 +46,18 @@ The default filenames should work properly. The directory `CAGNet/data` looks li
 
 ```
 
+### Training
+We offer the training code on `BIT` dataset. To train the model, you should download the pretrained basemodel and put it 
+into `data/` fold. Then run the program as follow:
+```bash
+cd cmd/
+./train_bit.sh
+```
+Note that the default code is run on three GPUs, and you can adjust it in the scripts.
+
 ### Evaluation
+Here we provide evaluation results same as in the paper.
+
 The Evaluation bash scripts are in `cmd/`.
 
 You can validate the CAGNet model of BIT by 
