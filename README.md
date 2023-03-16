@@ -30,6 +30,7 @@ the pretrained basemodel weights and the final CAGNet model weights respectly. Y
 - CAGNet_bit [BaiduYun](https://pan.baidu.com/s/18YAWt0Jgd9mhpAPOi9iOFg)  password: 06j0
 - CAGNet_tvhi [BaiduYun](https://pan.baidu.com/s/12j9eZ4Wniit9vKOKbunqPA)  password: 3ii2
 - **Basemodel_bit** [BaiduYun](https://pan.baidu.com/s/14KdWuVsrdZaR8rODDIKgiQ?pwd=6j9g) password: 6j9g 
+- **tracklets** [BaiduYun](https://pan.baidu.com/s/16NBfQjbQ5IF2vRf4BJor1Q?pwd=s5en) password: s5en 
 
 After downloading these assets, put the model weights in `CAGNet/data` and extract the datasets to `CAGNet/data`. 
 The default filenames should work properly. The directory `CAGNet/data` looks like this
