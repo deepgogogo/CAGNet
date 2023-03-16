@@ -1,5 +1,9 @@
 ##  Consistency-Aware Graph Network for Human Interaction Understanding
 
+### Update (2023.3.16)
+- Add experiments on synthetic dataset which has a greater set of action classes (100 action classes).See `synthetic` directory for details.
+- Construct Temporal Factor Graph Neural Network(TFGN) to leverage the temporal information in the videos. See `track` directory for details. 
+
 ### Introduction
 Compared with the progress made on human activity
 classification, much less success has been achieved on human interaction understanding (HIU). Apart from the latter
